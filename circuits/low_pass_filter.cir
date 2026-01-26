@@ -1,0 +1,18 @@
+* Kaspix Standardized Low-Pass Filter (LPF)
+* Propósito: Filtro de primer orden para dataset de audio.
+
+.param R_gain=10k    ; Resistencia de control (Rango sugerido: 1k - 100k)
+.param C_cut=100n    ; Capacitor de corte (Rango sugerido: 10n - 1u)
+
+* Entrada y Fuente
+Vin input 0 DC 0 AC 1
+
+* Circuito RC
+R1 input output {R_gain}
+C1 output 0 {C_cut}
+
+* Carga de alta impedancia para evitar caídas de tensión excesivas
+RLoad output 0 1Meg
+
+.save V(output)
+.end

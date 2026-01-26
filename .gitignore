@@ -205,3 +205,23 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+
+# ============================================================
+# Kaspix Project Specifics
+# ============================================================
+
+# Datasets: Ignoramos los archivos pesados generados (.pt, .csv, .npy)
+# Solo ignoramos el contenido, permitiendo que la carpeta exista si tiene un .gitkeep
+datasets/*.pt
+datasets/temp_*
+
+# Circuits: NO ignoramos los .cir porque son parte del código fuente.
+# Pero si generas logs de simulación o archivos temporales de NGSpice, ignóralos:
+*.raw
+*.log
+*.out
+
+# Model Checkpoints: Si empiezas a entrenar, ignora los pesos del modelo
+checkpoints/
+*.pth

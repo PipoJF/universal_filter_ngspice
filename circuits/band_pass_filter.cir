@@ -1,0 +1,24 @@
+* Kaspix Standardized Band-Pass Filter (BPF) - Cascade HPF+LPF
+* Propósito: Definir una banda de frecuencia específica.
+
+.param R_hp=10k      ; Controla frecuencia inferior
+.param C_hp=100n     
+.param R_lp=10k      ; Controla frecuencia superior
+.param C_lp=10n
+
+* Fuente de Entrada
+Vin input 0 DC 0 AC 1
+
+* Etapa 1: High-Pass
+C_h input node_mid {C_hp}
+R_h node_mid 0 {R_hp}
+
+* Etapa 2: Low-Pass
+R_l node_mid output {R_lp}
+C_l output 0 {C_lp}
+
+* Carga
+RLoad output 0 1Meg
+
+.save V(output)
+.end

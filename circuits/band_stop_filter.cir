@@ -1,0 +1,26 @@
+* Kaspix Standardized Band-Stop Filter (Twin-T Notch)
+* Propósito: Atenuar una frecuencia específica (reproducir "notch" filters).
+
+.param R_series=10k   
+.param C_series=100n  
+.param R_shunt=5k     ; Típicamente R_series / 2
+.param C_shunt=200n    ; Típicamente C_series * 2
+
+* Fuente de Entrada
+Vin input 0 DC 0 AC 1
+
+* Rama Low-Pass (T)
+R1 input node_1 {R_series}
+R2 node_1 output {R_series}
+C_s node_1 0 {C_shunt}
+
+* Rama High-Pass (T)
+C1 input node_2 {C_series}
+C2 node_2 output {C_series}
+R_s node_2 0 {R_shunt}
+
+* Carga
+RLoad output 0 1Meg
+
+.save V(output)
+.end
