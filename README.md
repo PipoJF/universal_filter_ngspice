@@ -20,8 +20,10 @@ An end-to-end framework for synthetic dataset generation and training of recurre
 /
 ├── activecircuits/     # Active filter netlists (Sallen-Key, MFB, Notch)
 ├── circuits/           # Passive filter netlists (LPF, HPF, BPF, etc.)
-├── datasets/           # Consolidated datasets (.pt)
-├── notebooks/          # Google Colab notebooks for generation and training
+├── ngspice_dataset.ipynb   # Dataset generation notebook
+├── ngspice_dataset_activefilters.ipynb # Active filter dataset generation
+├── benchmark_&_training.ipynb  # Model training and benchmarking
+├── benchmark_&_training_noise.ipynb  # Training with noisy parameters
 └── README.md           # Project documentation
 ```
 
