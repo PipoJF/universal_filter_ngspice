@@ -1,0 +1,45 @@
+* Kaspix Buck Converter Training Set
+* Objetivo: Aprender la relación no lineal entre Duty Cycle, Carga y Vout.
+
+* --- 1. PARÁMETROS VARIABLES (TUS KNOBS) ---
+* Rango sugerido Duty: 0.1 a 0.9 (10% a 90%)
+.param duty=0.5
+* Rango sugerido Carga: 5 a 100 Ohms
+.param R_load=10
+* Rango sugerido Entrada: 10V a 24V
+.param V_in_val=12
+
+* --- 2. FUENTE DE ENTRADA ---
+* Usamos el nombre 'Vin' y nodo 'input' como pediste.
+Vin input 0 DC {V_in_val}
+
+* --- 3. GENERADOR PWM (El corazón del control) ---
+* Genera pulsos cuadrados para activar el interruptor.
+* Frecuencia fija: 100kHz (Periodo = 10us)
+* Ancho de pulso (Ton) = duty * 10us
+V_gate gate 0 PULSE(0 10 0 10n 10n {duty*10u} 10u)
+
+* --- 4. ETAPA DE POTENCIA (Topología Buck) ---
+* Interruptor controlado por voltaje (Simula un MOSFET)
+S1 input sw_node gate 0 SwitchModel
+
+* Diodo de libre circulación (Schottky idealizado)
+D1 0 sw_node DiodeModel
+
+* Filtro LC (Almacenamiento de energía)
+L1 sw_node output 220u
+C1 output 0 47u
+
+* --- 5. CARGA ---
+R1 output 0 {R_load}
+
+* --- 6. MODELOS DE COMPONENTES ---
+.model SwitchModel SW(Ron=0.05 Roff=1Meg Vt=5)
+.model DiodeModel D(Is=1n Rs=0.1)
+
+* --- 7. COMANDOS DE SALIDA ---
+* Importante: Usamos transitorio porque el Buck es un sistema temporal
+.tran 1u 2m
+.save V(output) V(input) V(gate)
+
+.end

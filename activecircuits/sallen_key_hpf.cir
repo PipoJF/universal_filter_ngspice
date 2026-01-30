@@ -1,0 +1,35 @@
+* Kaspix Active Sallen-Key High-Pass Filter (HPF)
+* Propósito: Eliminar frecuencias graves.
+* Topología: Sallen-Key de 2do Orden (Componentes invertidos vs LPF)
+
+* --- 1. PARAMETROS VARIABLES ---
+* R_tune: Controla la frecuencia de corte.
+* En HPF: Mayor Resistencia = Corte más bajo (deja pasar más graves)
+* Menor Resistencia = Corte más alto (sonido más fino/agudo)
+.param R_tune=10k
+
+* --- 2. ENTRADA Y ALIMENTACIÓN ---
+Vin input 0 DC 0 AC 1
+
+* --- 3. CIRCUITO SALLEN-KEY (HPF) ---
+* A diferencia del LPF, aquí la señal entra por los CAPACITORES.
+
+* C1 y C2 en serie con la señal
+C1 input n1 10n
+C2 n1 n_plus 10n
+
+* Resistencias hacia tierra y referencia
+* R1 define la frecuencia junto con C1
+R1 n1 output {R_tune}   ; En HPF, esta R suele ir al nodo de feedback (output en ganancia 1)
+R2 n_plus 0 {R_tune}    ; Esta R va a tierra
+
+* --- 4. AMPLIFICADOR OPERACIONAL (Buffer Unitario) ---
+* Modelo idealizado VCVS (Voltage Controlled Voltage Source)
+E_opamp output 0 VOLTAGE ( n_plus 0 ) 1
+
+* --- 5. CARGA ---
+R_load output 0 100k
+
+.save V(output)
+.tran 10u 40m
+.end

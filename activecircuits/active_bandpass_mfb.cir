@@ -1,0 +1,53 @@
+* Kaspix Active Band-Pass Filter (MFB Topology)
+* Propósito: Aislar una frecuencia central (Efecto tipo 'Wah' fijo o EQ medio)
+* Topología: Infinite Gain Multiple Feedback (IGMF)
+
+* --- 1. PARAMETROS VARIABLES ---
+* R_tune: Controla la Frecuencia Central (Center Freq).
+* R_tune Bajo  (1k)  -> Frecuencia Alta (Agudos chillones)
+* R_tune Alto (100k) -> Frecuencia Baja (Medios/Graves opacos)
+.param R_tune=10k
+
+* --- 2. ENTRADA ---
+Vin input 0 DC 0 AC 1
+
+* --- 3. CIRCUITO MFB (Multiple Feedback) ---
+* Esta topología usa un OpAmp inversor y dos caminos de retroalimentación.
+* Nodos Clave: 
+* input -> Entrada
+* n_sum -> Nodo de suma (antes de los capacitores)
+* n_inv -> Entrada inversora del OpAmp (Virtual Ground)
+* output -> Salida
+
+* R1: Resistencia de entrada
+R1 input n_sum {R_tune}
+
+* R2: Resistencia a Tierra (Ayuda a definir el Q/Ancho de banda)
+* La fijamos proporcional a R_tune para mantener la forma de la campana constante
+* al mover la frecuencia.
+R2 n_sum 0 {R_tune * 0.1}
+
+* C1 y C2: Capacitores de la red
+* En MFB BPF: C1 va del nodo suma a la entrada inv. C2 es feedback.
+C1 n_sum n_inv 10n
+C2 n_sum output 10n
+
+* R3: Resistencia de Feedback (Define ganancia y freq)
+R3 n_inv output {R_tune * 2}
+
+* --- 4. AMPLIFICADOR OPERACIONAL ---
+* Configuración Inversora
+* Entrada No-Inversora (n_plus) va a tierra.
+* Entrada Inversora es n_inv.
+* Nota: Un MFB invierte la fase (gana -1 en el centro), pero para audio
+* el oído no detecta la fase absoluta, así que está bien.
+
+E_opamp output 0 VOLTAGE ( 0 n_inv ) 100000 
+* Usamos ganancia alta (100k) open-loop para simular un OpAmp ideal en configuración cerrada
+
+* --- 5. CARGA ---
+R_load output 0 100k
+
+.save V(output)
+.tran 10u 40m
+.end
