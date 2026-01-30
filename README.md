@@ -1,80 +1,77 @@
-
-# Kaspix Pipeline: Neural Circuit Modeling 
+# Kaspix Pipeline: Neural Circuit Modeling (Omni-Pipeline)
 
 ![Status](https://img.shields.io/badge/Physics--AI-Pipeline-blueviolet)
 ![Framework](https://img.shields.io/badge/PyTorch-Dataset-orange)
 ![Simulation](https://img.shields.io/badge/Engine-NGSpice-lightgrey)
+![Environment](https://img.shields.io/badge/Runtime-Google%20Colab-yellow)
 
-An end-to-end framework for synthetic dataset generation and training of recurrent neural networks (RNNs) designed to emulate analog filter behavior. This system converts physical SPICE topologies into tensors optimized for dynamic conditioning architectures like **FiLM (Feature-wise Linear Modulation)**.
+An end-to-end framework for synthetic dataset generation and training of recurrent neural networks (RNNs/LSTMs) designed to emulate analog filter behavior. This system converts physical SPICE topologies—including active and passive circuits—into tensors optimized for dynamic conditioning architectures like **FiLM (Feature-wise Linear Modulation)**.
 
 ## 🚀 Key Features
 
-* **Multi-Topology Support**: Automated generation for multiple filters (LPF, HPF, BPF, Notch) into a single consolidated dataset.
-* **Stochastic Signal Factory**: Recipe-based excitation system (Pink Noise, Chirps, Step Sequences) to capture spectral dynamics and transients.
-* **Circuit ID & Metadata**: Each sample includes a unique identifier and parameter mapping to enable multi-task learning.
-* **Hardware-Agnostic Processing**: Intelligent handling of *knobs* (parameters) using **Automatic Padding** for circuits of varying complexity.
+* **Active & Passive Support**: Automated generation for 1st-order passive networks and 2nd-order active topologies (Sallen-Key, Multiple Feedback, Twin-T).
+* **Omni-Pipeline V4.2**: Refactored simulation worker supporting dynamic attribute injection for Resistors, Capacitors, Inductors, and VCVS (OpAmps).
+* **Circuit ID & Metadata**: Each sample includes a unique categorical identifier to enable multi-task learning and topology switching.
+* **Zero-Padding Strategy**: Intelligent standardization of control *knobs* to maintain a fixed tensor dimension (Size 5) across circuits of varying complexity.
 
 ## 📂 Repository Structure
 
 ```text
 /
-├── circuits/           # Standardized .cir files (NGSpice)
+├── activecircuits/     # Active filter netlists (Sallen-Key, MFB, Notch)
+├── circuits/           # Passive filter netlists (LPF, HPF, BPF, etc.)
 ├── datasets/           # Consolidated datasets (.pt)
-├── ngspice_dataset.ipynb  # Main simulation and generation pipeline
+├── notebooks/          # Google Colab notebooks for generation and training
 └── README.md           # Project documentation
-
 ```
 
-## 🛠️ Netlist Format (SPICE Templates)
+## 🛠️ Setup & Execution (Google Colab)
+Due to the specific requirements of libngspice shared libraries and Linux binary links, the recommended environment is Google Colab.
 
-For the `NetlistProcessor` to extract parameters and run stochastic simulations generically, `.cir` files must follow these structural rules:
+Environment: Use a T4 GPU or TPU runtime for faster dataset generation.
 
-### 1. Parameter Definition (`.param`)
+Automated Installation: The first cell of the notebooks performs the necessary setup:
 
-Components intended to be varied by the generator must be defined using the `.param` directive. The processor uses these lines to identify the control "Knobs".
+- Installs ngspice and libngspice0 via apt-get.
 
-```spice
-.param R_gain=10k  ; Automatically detected as a control variable
-.param C_cut=100n   ; Automatically detected as a control variable
+- Creates the symbolic link: libngspice.so.0 -> libngspice.so.
 
-```
+- Installs PySpice and torch.
 
-### 2. Standard I/O Nodes
+**Note**: Local Windows installation is currently not supported due to complex .dll path mapping and NGSpice environment variables.
 
-The circuit must use fixed node names so the audio pipeline knows where to inject and measure the signal automatically:
+## 🧪 Netlist Format (SPICE Templates)
+For the generator to extract parameters generically, .cir files must follow these rules:
 
-* **Input:** Voltage source `Vin` connected to the `input` node.
-* **Output:** The voltage measurement point must be the `output` node.
+1. Parameter Definition (.param)
+Control variables must use the .param directive. These are detected as "Knobs".
 
-### 3. Extraction Directive
+    ```
+    .param R_tune=10k  ; Detected as a frequency control knob
+    .param C_base=10n   ; Detected as a secondary hardware parameter
+    ```
 
-The line `.save V(output)` must be included at the end of the file. This ensures NGSpice only exports the necessary data vector, optimizing generation speed and memory usage.
+2. Standard I/O Nodes
+    
+    - Input: Voltage source Vin connected to the input node.
 
-## 📊 Final Dataset Structure
+    - Output: Measurement point must be the output node.
 
-The `kaspix_full_dataset.pt` file is a PyTorch container that unifies multiple topologies into a coherent structure, resolving differences in component counts through metadata and **padding**.
+    - Ground: Standard 0 node.
 
-### Content of the `.pt` File
+## 📊 Dataset Structure
+The kaspix_full_dataset.pt is a PyTorch container that unifies multiple topologies into a coherent structure.
 
-When loading the dataset using `torch.load(..., weights_only=False)`, you will obtain a dictionary containing:
+Tensor Unpacking Protocol
+The data loader yields a 4-value tuple for each batch:
 
-1. **`x` (Inputs):** A list of dictionaries. Each entry contains:
-* `audio_in`: Input signal tensor (excitation).
-* `knobs`: Normalized parameter vector (0-1 scale) with **Zero-Padding**.
-* `circuit_id`: Unique numeric index of the topology (e.g., `0` for LPF, `1` for BPF).
-* `netlist_origin`: Source filename for data auditing.
+1. Audio Input: Normalized excitation signal (Chirps, Noise, etc.).
 
+2. Knobs: Normalized parameter vector (0-1 scale) padded to size 5.
 
-2. **`y` (Outputs/Targets):** A list of tensors containing the real physical response obtained via NGSpice.
-3. **`metadata`:** A global dictionary with experiment info:
-* `circuit_mapping`: ID-to-Name translation dictionary (e.g., `{0: "low_pass_filter.cir"}`).
-* `fs`: Sampling frequency (Sample Rate).
-* `n_samples_total`: Total number of generated samples.
+3. Circuit IDs: Categorical index (e.g., 0: LPF, 1: HPF, 4: MFB_BPF).
 
+4. Target: Real physical response obtained via NGSpice simulation.
 
-
-### The Concept of "Zero-Padding" in Knobs
-
-Since a High-Pass filter might have 2 parameters and a Notch filter might have 4, the dataset standardizes all vectors to the size of the most complex circuit in the batch.
-
-> **Example:** If the maximum number of parameters is 4, a simple 2-parameter filter is stored as `[val1, val2, 0, 0]`. The neural network uses the `circuit_id` (via Embeddings or FiLM layers) to learn which values in that vector are physically relevant for each specific topology.
+**Technical Note**: Zero-Padding
+Since an LPF might have 3 knobs and a Notch filter 5, the pipeline standardizes all vectors. The neural network uses the Circuit ID (via Embeddings or FiLM layers) to learn which values in that vector are physically relevant for each specific topology.
