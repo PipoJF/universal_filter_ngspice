@@ -1,0 +1,55 @@
+* Kaspix Active Twin-T Notch Filter (Band-Stop)
+* Propósito: Eliminar una frecuencia específica (ej. Hum o feedback)
+* Topología: Twin-T con Bootstrapping para mejorar el Q (hacer el corte más fino)
+
+* --- 1. PARAMETROS VARIABLES ---
+* R_tune: Define la frecuencia que queremos "matar".
+* R_tune Bajo (1k)  -> Elimina agudos (chirrido)
+* R_tune Alto (100k) -> Elimina graves (hum)
+.param R_tune=10k
+.param C_base=10n
+
+* --- 2. ENTRADA ---
+Vin input 0 DC 0 AC 1
+
+* --- 3. RED TWIN-T (La trampa de frecuencias) ---
+* Se compone de dos "T" en paralelo.
+
+* -- T Superior (Pasa-Altos, C-C-R) --
+C1 input  n_mid1 {C_base}
+C2 n_mid1 n_in   {C_base}
+* La resistencia vertical debe ser R/2
+R_leg1 n_mid1 node_boot {R_tune * 0.5}
+
+* -- T Inferior (Pasa-Bajos, R-R-C) --
+R1 input  n_mid2 {R_tune}
+R2 n_mid2 n_in   {R_tune}
+* El capacitor vertical debe ser 2*C
+C_leg2 n_mid2 node_boot {C_base * 2}
+
+* Nota: "node_boot" es el punto de referencia común de las T.
+* Si lo conectamos a tierra, el corte es ancho (bajo Q).
+* Si lo conectamos a la salida (Bootstrapping), el corte se hace muy fino (alto Q).
+
+* --- 4. AMPLIFICADOR OPERACIONAL ---
+* Configurado como Seguidor de Voltaje (Buffer) con Bootstrapping.
+* Entrada: n_in (unión de las dos T)
+* Salida: output
+
+E_opamp output 0 VOLTAGE ( n_in 0 ) 1
+
+* --- 5. BOOTSTRAPPING (Truco de Calidad) ---
+* Retroalimentamos una fracción de la salida a la base de las T (node_boot).
+* Esto hace que la resistencia efectiva aumente y el filtro sea más selectivo.
+* Usamos un divisor de voltaje simple para definir el factor de feedback (k).
+* k cercano a 1 = Notch muy fino. k = 0 = Notch ancho.
+
+R_f1 output node_boot 1k
+R_f2 node_boot 0      100 ; Divisor para estabilidad (casi tierra pero levantada)
+
+* --- 6. CARGA ---
+R_load output 0 100k
+
+.save V(output)
+.tran 10u 40m
+.end
